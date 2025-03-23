@@ -4,7 +4,8 @@ const bodyParser = require("body-parser");
 const connectDB = require("./config/config");
 const nodemailer = require("nodemailer");
 const userRoutes = require("./routes/userRoutes");
-
+const multer = require("multer");
+const upload = multer();
 const app = express();
 connectDB();
 
@@ -52,9 +53,13 @@ Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longi
   }
 });
 
-app.post("/send-audio-mail", async (req, res) => {
+app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
   const { user, guardianEmails } = req.query; // Get user and emails from query params
   const audioFile = req.file; // Get the uploaded audio file
+
+  console.log("Received file:", audioFile); // Log the file for debugging
+  console.log("User:", user); // Log the user for debugging
+  console.log("Guardian Emails:", guardianEmails); // Log the emails for debugging
 
   if (!guardianEmails || guardianEmails.length === 0) {
     return res.status(400).json({ message: "No guardian emails provided." });
