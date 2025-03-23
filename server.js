@@ -52,7 +52,7 @@ Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longi
   }
 });
 
-app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
+app.post("/send-audio-mail", async (req, res) => {
   const { user, guardianEmails } = req.query; // Get user and emails from query params
   const audioFile = req.file; // Get the uploaded audio file
 
