@@ -52,31 +52,38 @@ Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longi
   }
 });
 
-app.post("/send-audio-mail", async (req, res) => {
-  const { user, guardianEmails, audio } = req.body;
+app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
+  const { user, guardianEmails } = req.query; // Get user and emails from query params
+  const audioFile = req.file; // Get the uploaded audio file
 
   if (!guardianEmails || guardianEmails.length === 0) {
     return res.status(400).json({ message: "No guardian emails provided." });
   }
 
-  // Create transporter
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: "lifeline8555@gmail.com",
-      pass: "gwhn trey sker wenp",
-    },
-  });
-
-  const mailOptions = {
-    from: "lifeline8555@gmail.com",
-    to: guardianEmails,
-    subject: "Urgent: Help",
-    text: ` ${user.name} is not feeling safe. Please reach out to them immediately.  
-They have sent an audio ${audio}`,
-  };
+  if (!audioFile) {
+    return res.status(400).json({ message: "No audio file provided." });
+  }
 
   try {
+    // Parse user and emails from query params
+    const userData = JSON.parse(user);
+    const emails = JSON.parse(guardianEmails);
+
+    // Define mail options
+    const mailOptions = {
+      from: "lifeline8555@gmail.com",
+      to: emails.join(", "), // Send to multiple recipients
+      subject: "Urgent: Help",
+      text: `${userData.name} is not feeling safe. Please reach out to them immediately.`,
+      attachments: [
+        {
+          filename: "audio.m4a", // Name of the attachment
+          content: audioFile.buffer, // Audio file as a buffer
+        },
+      ],
+    };
+
+    // Send the email
     await transporter.sendMail(mailOptions);
     res.status(200).json({ message: "Alert email sent successfully." });
   } catch (error) {
