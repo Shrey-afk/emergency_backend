@@ -54,6 +54,8 @@ Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longi
 });
 
 app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
+  // Create transporter for nodemailer
+
   const { user, guardianEmails } = req.query; // Get user and emails from query params
   const audioFile = req.file; // Get the uploaded audio file
 
@@ -87,12 +89,19 @@ app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
         },
       ],
     };
-
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "lifeline8555@gmail.com",
+        pass: "gwhn trey sker wenp",
+      },
+    });
     // Send the email
     await transporter.sendMail(mailOptions);
     res.status(200).json({ message: "Alert email sent successfully." });
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.log(error);
+
     res.status(500).json({ message: "Failed to send email." });
   }
 });
