@@ -114,7 +114,7 @@ app.post("/send-otp", async (req, res) => {
 app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
   // Create transporter for nodemailer
 
-  const { user, guardianEmails } = req.query; // Get user and emails from query params
+  const { user, guardianEmails, location } = req.query; // Get user and emails from query params
   const audioFile = req.file; // Get the uploaded audio file
 
   console.log("Received file:", audioFile); // Log the file for debugging
@@ -139,7 +139,14 @@ app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
       from: "lifeline8555@gmail.com",
       to: emails.join(", "), // Send to multiple recipients
       subject: "Urgent: Help",
-      text: `${userData.name} is not feeling safe. Please reach out to them immediately.`,
+      text: `${userData.name} is not feeling safe. Please reach out to them immediately. Current Location:  
+Latitude: ${location.latitude}, Longitude: ${location.longitude}  
+
+Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longitude} `,
+      html: `<p><strong>${user.name}</strong> is not feeling safe. Please reach out to them immediately.</p>
+         <p><strong>Current Location:</strong> Latitude: ${location.latitude}, Longitude: ${location.longitude}</p>
+         <p><a href="https://www.google.com/maps?q=${location.latitude},${location.longitude}" target="_blank">
+         <strong>Click here to view location in Google Maps</strong></a></p>`,
       attachments: [
         {
           filename: "audio.m4a", // Name of the attachment
