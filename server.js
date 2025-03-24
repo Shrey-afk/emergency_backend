@@ -163,7 +163,9 @@ Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longi
     });
     // Send the email
     await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "Alert email sent successfully." });
+    res
+      .status(200)
+      .json({ message: "Alert email sent successfully.", userData });
   } catch (error) {
     console.log(error);
 
