@@ -114,29 +114,40 @@ app.post("/send-otp", async (req, res) => {
 
 app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
   try {
-    const { user, guardianEmails, location } = req.query;
-    const audioFile = req.file;
+    // Safely parse query parameters
+    const parseParam = (param) => {
+      try {
+        return param ? JSON.parse(param) : null;
+      } catch (e) {
+        console.error(`Failed to parse ${param}`);
+        return null;
+      }
+    };
 
-    console.log("Received file info:", {
-      originalname: audioFile?.originalname,
-      mimetype: audioFile?.mimetype,
-      size: audioFile?.size,
-    });
+    const user = parseParam(req.query.user);
+    const guardianEmails = parseParam(req.query.guardianEmails);
+    const location = parseParam(req.query.location);
 
-    if (!guardianEmails || guardianEmails.length === 0) {
-      return res.status(400).json({ message: "No guardian emails provided." });
+    // Validate required fields
+    if (
+      !guardianEmails ||
+      !Array.isArray(guardianEmails) ||
+      guardianEmails.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid guardian emails provided.",
+      });
     }
 
-    if (!audioFile) {
-      return res.status(400).json({ message: "No audio file provided." });
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No audio file provided.",
+      });
     }
 
-    // Parse the query parameters
-    const userData = JSON.parse(user);
-    const emails = JSON.parse(guardianEmails);
-    const locationData = JSON.parse(location);
-
-    // Create transporter
+    // Prepare email
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -145,38 +156,31 @@ app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
       },
     });
 
-    // Email options
     const mailOptions = {
       from: "lifeline8555@gmail.com",
-      to: emails.join(", "),
+      to: guardianEmails.join(", "),
       subject: "Urgent: Help",
-      text: `${userData?.name} is not feeling safe. Please reach out to them immediately.\n\nCurrent Location:\nLatitude: ${locationData.latitude}, Longitude: ${locationData.longitude}\n\nGoogle Maps: https://www.google.com/maps?q=${locationData.latitude},${locationData.longitude}`,
-      html: `
-        <p><strong>${userData?.name}</strong> is not feeling safe. Please reach out to them immediately.</p>
-        <p><strong>Current Location:</strong> Latitude: ${locationData.latitude}, Longitude: ${locationData.longitude}</p>
-        <p><a href="https://www.google.com/maps?q=${locationData.latitude},${locationData.longitude}" target="_blank">
-        <strong>Click here to view location in Google Maps</strong></a></p>
-      `,
+      text: `${user?.name} needs assistance. Location: ${location?.latitude},${location?.longitude}`,
       attachments: [
         {
-          filename: audioFile.originalname || "audio.m4a",
-          content: audioFile.buffer,
-          contentType: audioFile.mimetype,
+          filename: "audio.m4a",
+          content: req.file.buffer,
         },
       ],
     };
 
+    // Send email
     await transporter.sendMail(mailOptions);
+
     res.status(200).json({
       success: true,
-      message: "Alert email sent successfully.",
-      user: userData?.name,
+      message: "Alert sent successfully",
     });
   } catch (error) {
-    console.error("Error in send-audio-mail:", error);
+    console.error("Server error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to send email.",
+      message: "Failed to process request",
       error: error.message,
     });
   }
