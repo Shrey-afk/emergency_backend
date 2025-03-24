@@ -133,6 +133,7 @@ app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
     // Parse user and emails from query params
     const userData = JSON.parse(user);
     const emails = JSON.parse(guardianEmails);
+    console.log(userData);
 
     // Define mail options
     const mailOptions = {
@@ -163,12 +164,10 @@ Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longi
     });
     // Send the email
     await transporter.sendMail(mailOptions);
-    res
-      .status(200)
-      .json({
-        message: "Alert email sent successfully.",
-        user: userData?.name,
-      });
+    res.status(200).json({
+      message: "Alert email sent successfully.",
+      user: userData?.name,
+    });
   } catch (error) {
     console.log(error);
 
