@@ -9,5 +9,6 @@ router.get("/allUsers", userController.getAllUsers);
 router.post("/add-guardian", userController.addGuardian);
 router.post("/delete-guardian", userController.deleteGuardian);
 router.post("/update-location", userController.updateLocation);
+router.post("/update-password", userController.updatePassword);
 
 module.exports = router;

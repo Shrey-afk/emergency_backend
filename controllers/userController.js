@@ -146,6 +146,30 @@ exports.updateLocation = async (req, res) => {
   }
 };
 
+exports.updatePassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(202).json({
+      message: "Successfully saved location",
+      success: true,
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.getAllUsers = async (req, res) => {
   try {
     const allUsers = await User.find();
