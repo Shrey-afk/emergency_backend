@@ -157,11 +157,14 @@ exports.updatePassword = async (req, res) => {
       });
     }
 
-    user.password = newPassword;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
     await user.save();
 
     return res.status(202).json({
-      message: "Successfully saved location",
+      message: "Successfully saved password",
       success: true,
       user,
     });
