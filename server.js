@@ -5,7 +5,8 @@ const connectDB = require("./config/config");
 const nodemailer = require("nodemailer");
 const userRoutes = require("./routes/userRoutes");
 const multer = require("multer");
-const upload = multer();
+const storage = multer.memoryStorage(); // Store files in memory as buffers
+const upload = multer({ storage: storage });
 const app = express();
 connectDB();
 
@@ -112,49 +113,30 @@ app.post("/send-otp", async (req, res) => {
 });
 
 app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
-  // Create transporter for nodemailer
-
-  const { user, guardianEmails, location } = req.query; // Get user and emails from query params
-  const audioFile = req.file; // Get the uploaded audio file
-
-  console.log("Received file:", audioFile); // Log the file for debugging
-  console.log("User:", user); // Log the user for debugging
-  console.log("Guardian Emails:", guardianEmails); // Log the emails for debugging
-
-  if (!guardianEmails || guardianEmails.length === 0) {
-    return res.status(400).json({ message: "No guardian emails provided." });
-  }
-
-  if (!audioFile) {
-    return res.status(400).json({ message: "No audio file provided." });
-  }
-
   try {
-    // Parse user and emails from query params
+    const { user, guardianEmails, location } = req.query;
+    const audioFile = req.file;
+
+    console.log("Received file info:", {
+      originalname: audioFile?.originalname,
+      mimetype: audioFile?.mimetype,
+      size: audioFile?.size,
+    });
+
+    if (!guardianEmails || guardianEmails.length === 0) {
+      return res.status(400).json({ message: "No guardian emails provided." });
+    }
+
+    if (!audioFile) {
+      return res.status(400).json({ message: "No audio file provided." });
+    }
+
+    // Parse the query parameters
     const userData = JSON.parse(user);
     const emails = JSON.parse(guardianEmails);
-    console.log(userData);
+    const locationData = JSON.parse(location);
 
-    // Define mail options
-    const mailOptions = {
-      from: "lifeline8555@gmail.com",
-      to: emails.join(", "), // Send to multiple recipients
-      subject: "Urgent: Help",
-      text: `${userData?.name} is not feeling safe. Please reach out to them immediately. Current Location:  
-Latitude: ${location.latitude}, Longitude: ${location.longitude}  
-
-Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longitude} `,
-      html: `<p><strong>${userData?.name}</strong> is not feeling safe. Please reach out to them immediately.</p>
-         <p><strong>Current Location:</strong> Latitude: ${location.latitude}, Longitude: ${location.longitude}</p>
-         <p><a href="https://www.google.com/maps?q=${location.latitude},${location.longitude}" target="_blank">
-         <strong>Click here to view location in Google Maps</strong></a></p>`,
-      attachments: [
-        {
-          filename: "audio.m4a", // Name of the attachment
-          content: audioFile.buffer, // Audio file as a buffer
-        },
-      ],
-    };
+    // Create transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -162,16 +144,41 @@ Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longi
         pass: "gwhn trey sker wenp",
       },
     });
-    // Send the email
+
+    // Email options
+    const mailOptions = {
+      from: "lifeline8555@gmail.com",
+      to: emails.join(", "),
+      subject: "Urgent: Help",
+      text: `${userData?.name} is not feeling safe. Please reach out to them immediately.\n\nCurrent Location:\nLatitude: ${locationData.latitude}, Longitude: ${locationData.longitude}\n\nGoogle Maps: https://www.google.com/maps?q=${locationData.latitude},${locationData.longitude}`,
+      html: `
+        <p><strong>${userData?.name}</strong> is not feeling safe. Please reach out to them immediately.</p>
+        <p><strong>Current Location:</strong> Latitude: ${locationData.latitude}, Longitude: ${locationData.longitude}</p>
+        <p><a href="https://www.google.com/maps?q=${locationData.latitude},${locationData.longitude}" target="_blank">
+        <strong>Click here to view location in Google Maps</strong></a></p>
+      `,
+      attachments: [
+        {
+          filename: audioFile.originalname || "audio.m4a",
+          content: audioFile.buffer,
+          contentType: audioFile.mimetype,
+        },
+      ],
+    };
+
     await transporter.sendMail(mailOptions);
     res.status(200).json({
+      success: true,
       message: "Alert email sent successfully.",
       user: userData?.name,
     });
   } catch (error) {
-    console.log(error);
-
-    res.status(500).json({ message: "Failed to send email." });
+    console.error("Error in send-audio-mail:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to send email.",
+      error: error.message,
+    });
   }
 });
 
