@@ -113,41 +113,49 @@ app.post("/send-otp", async (req, res) => {
 });
 
 app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
+  // Create transporter for nodemailer
+
+  const { user, guardianEmails, location } = req.query; // Get user and emails from query params
+  const audioFile = req.file; // Get the uploaded audio file
+
+  console.log("Received file:", audioFile); // Log the file for debugging
+  console.log("User:", user); // Log the user for debugging
+  console.log("Guardian Emails:", guardianEmails); // Log the emails for debugging
+
+  if (!guardianEmails || guardianEmails.length === 0) {
+    return res.status(400).json({ message: "No guardian emails provided." });
+  }
+
+  if (!audioFile) {
+    return res.status(400).json({ message: "No audio file provided." });
+  }
+
   try {
-    // Safely parse query parameters
-    const parseParam = (param) => {
-      try {
-        return param ? JSON.parse(param) : null;
-      } catch (e) {
-        console.error(`Failed to parse ${param}`);
-        return null;
-      }
+    // Parse user and emails from query params
+    const userData = JSON.parse(user);
+    const emails = JSON.parse(guardianEmails);
+    console.log(userData);
+
+    // Define mail options
+    const mailOptions = {
+      from: "lifeline8555@gmail.com",
+      to: emails.join(", "), // Send to multiple recipients
+      subject: "Urgent: Help",
+      text: `${userData?.name} is not feeling safe. Please reach out to them immediately. Current Location:  
+Latitude: ${location.latitude}, Longitude: ${location.longitude}  
+
+Google Maps: https://www.google.com/maps?q=${location.latitude},${location.longitude} `,
+      html: `<p><strong>${userData?.name}</strong> is not feeling safe. Please reach out to them immediately.</p>
+         <p><strong>Current Location:</strong> Latitude: ${location.latitude}, Longitude: ${location.longitude}</p>
+         <p><a href="https://www.google.com/maps?q=${location.latitude},${location.longitude}" target="_blank">
+         <strong>Click here to view location in Google Maps</strong></a></p>`,
+      attachments: [
+        {
+          filename: "audio.m4a", // Name of the attachment
+          content: audioFile.buffer, // Audio file as a buffer
+        },
+      ],
     };
-
-    const user = parseParam(req.query.user);
-    const guardianEmails = parseParam(req.query.guardianEmails);
-    const location = parseParam(req.query.location);
-
-    // Validate required fields
-    if (
-      !guardianEmails ||
-      !Array.isArray(guardianEmails) ||
-      guardianEmails.length === 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "No valid guardian emails provided.",
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "No audio file provided.",
-      });
-    }
-
-    // Prepare email
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -155,34 +163,16 @@ app.post("/send-audio-mail", upload.single("file"), async (req, res) => {
         pass: "gwhn trey sker wenp",
       },
     });
-
-    const mailOptions = {
-      from: "lifeline8555@gmail.com",
-      to: guardianEmails.join(", "),
-      subject: "Urgent: Help",
-      text: `${user?.name} needs assistance. Location: ${location?.latitude},${location?.longitude}`,
-      attachments: [
-        {
-          filename: "audio.m4a",
-          content: req.file.buffer,
-        },
-      ],
-    };
-
-    // Send email
+    // Send the email
     await transporter.sendMail(mailOptions);
-
     res.status(200).json({
-      success: true,
-      message: "Alert sent successfully",
+      message: "Alert email sent successfully.",
+      user: userData?.name,
     });
   } catch (error) {
-    console.error("Server error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to process request",
-      error: error.message,
-    });
+    console.log(error);
+
+    res.status(500).json({ message: "Failed to send email." });
   }
 });
 
